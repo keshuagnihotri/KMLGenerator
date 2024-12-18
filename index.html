@@ -109,25 +109,28 @@
 
         function buildKML(businessName, centerLat, centerLon, description, keywords, radius, circlesCount) {
             const RADIUS_OF_EARTH = 6371; // Earth radius in km
+            const colors = ["ff0000ff", "ff00ff00", "ffff0000", "ffffff00", "ffff00ff"]; // Red, Green, Blue, Yellow, Magenta
             let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
             kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
-            kml += `<name>${businessName} Circles</name>\n`;
+            kml += `<name>${businessName}</name>\n`;
 
             let currentRadius = radius;
             let keywordIndex = 0;
 
             for (let i = 0; i < circlesCount; i++) {
-                kml += `<Folder>\n<name>Circle ${i + 1} - ${currentRadius} KM</name>\n`;
+                kml += `<Folder>\n<name>${businessName} - Circle ${i + 1} - ${currentRadius} KM</name>\n`;
 
                 const circlePoints = generateCirclePoints(centerLat, centerLon, currentRadius, 360);
                 for (let j = 0; j < circlePoints.length; j++) {
                     const [lat, lon] = circlePoints[j];
                     const tagKeyword = keywords[keywordIndex % keywords.length];
+                    const color = colors[keywordIndex % colors.length]; // Alternate colors
                     keywordIndex++;
 
                     kml += `<Placemark>\n`;
                     kml += `<name>${tagKeyword}</name>\n`;
                     kml += `<description>${tagKeyword}: ${description}</description>\n`;
+                    kml += `<Style><IconStyle><color>${color}</color><scale>1.1</scale></IconStyle></Style>\n`;
                     kml += `<Point>\n<coordinates>${lon},${lat},0</coordinates>\n</Point>\n`;
                     kml += `</Placemark>\n`;
                 }
