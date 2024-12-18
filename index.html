@@ -126,12 +126,16 @@
                 kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
                 kml += `<name>${businessName}</name>\n`;
 
-                radii.forEach(radius => {
+                radii.forEach((radius, radiusIndex) => {
                     const points = calculateCirclePoints(latitude * (Math.PI / 180), longitude * (Math.PI / 180), radius);
                     points.forEach((point, index) => {
                         const keyword = keywords[index % keywords.length];
+                        const color = radiusIndex % 2 === 0 ? "ff0000ff" : "ff00ff00"; // Alternate between blue and green
+
                         kml += `<Placemark>\n`;
-                        kml += `<name>${keyword}: ${description}</name>\n`;
+                        kml += `<name>${keyword}</name>\n`;
+                        kml += `<description>${description}</description>\n`;
+                        kml += `<Style><IconStyle><color>${color}</color></IconStyle></Style>\n`;
                         kml += `<Point><coordinates>${point.lng},${point.lat}</coordinates></Point>\n`;
                         kml += `</Placemark>\n`;
                     });
