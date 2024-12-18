@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geo Circle KML Generator</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    #output {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Geo Circle KML Generator</h1>
+    <label for="businessName">Business Name</label>
+    <input type="text" id="businessName" placeholder="Enter Business Name" />
+
+    <label for="description">Business Description</label>
+    <input type="text" id="description" placeholder="Enter Description" />
+
+    <label>Keywords</label>
+    <input type="text" id="keyword1" placeholder="Keyword 1" />
+    <input type="text" id="keyword2" placeholder="Keyword 2" />
+    <input type="text" id="keyword3" placeholder="Keyword 3" />
+    <input type="text" id="keyword4" placeholder="Keyword 4" />
+    <input type="text" id="keyword5" placeholder="Keyword 5" />
+
+    <label for="radius">Radius and Circle Count</label>
+    <select id="radius">
+      <option value="5,1">5 Km (1 Circle)</option>
+      <option value="10,2">10 Km (2 Circles)</option>
+      <option value="15,3">15 Km (3 Circles)</option>
+      <option value="30,6">30 Km (6 Circles)</option>
+      <option value="50,10">50 Km (10 Circles)</option>
+      <option value="100,20">100 Km (20 Circles)</option>
+    </select>
+
+    <button onclick="generateKML()">Generate KML</button>
+    <div id="output"></div>
+  </div>
+
+  <script>
+    let centerCoordinates = null;
+
+    // Google Maps API: Search Business and Get Center Coordinates
+    function searchBusinessName(businessName, callback) {
+      const service = new google.maps.places.PlacesService(document.createElement('div'));
+      const request = {
+        query: businessName,
+        fields: ['geometry'],
+      };
+
+      service.findPlaceFromQuery(request, function (results, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
+          centerCoordinates = results[0].geometry.location;
+          callback(centerCoordinates);
+        } else {
+          alert('Business not found! Please enter a valid name.');
+        }
+      });
+    }
+
+    // Generate Circle Coordinates
+    function generateCircle(centerLat, centerLng, radiusKm) {
+      const points = [];
+      const earthRadius = 6371; // Earth Radius in Km
+      const numPoints = 360;
+
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i * Math.PI) / 180; // Convert to Radians
+        const lat = centerLat + (radiusKm / earthRadius) * (180 / Math.PI) * Math.sin(angle);
+        const lng = centerLng + (radiusKm / earthRadius) * (180 / Math.PI) * Math.cos(angle) / Math.cos(centerLat * Math.PI / 180);
+        points.push([lat, lng]);
+      }
+
+      // Close the circle
+      points.push(points[0]);
+      return points;
+    }
+
+    // Generate KML File
+    function generateKML() {
+      const businessName = document.getElementById('businessName').value;
+      const description = document.getElementById('description').value;
+      const radiusOption = document.getElementById('radius').value;
+      const [radiusKm, circleCount] = radiusOption.split(',').map(Number);
+
+      if (!businessName) {
+        alert('Please enter the Business Name.');
+        return;
+      }
+
+      searchBusinessName(businessName, function (center) {
+        const kmlLines = [];
+        kmlLines.push('<?xml version="1.0" encoding="UTF-8"?>');
+        kmlLines.push('<kml xmlns="http://www.opengis.net/kml/2.2">');
+        kmlLines.push('<Document>');
+        kmlLines.push(`<name>${businessName} - Geo Circles</name>`);
+
+        for (let i = 1; i <= circleCount; i++) {
+          const currentRadius = radiusKm * i;
+          const circleCoordinates = generateCircle(center.lat(), center.lng(), currentRadius);
+
+          kmlLines.push('<Placemark>');
+          kmlLines.push(`<name>${businessName} - ${currentRadius} Km</name>`);
+          kmlLines.push(`<description>${description}</description>`);
+          kmlLines.push('<Polygon><outerBoundaryIs><LinearRing><coordinates>');
+
+          circleCoordinates.forEach(coord => {
+            kmlLines.push(`${coord[1]},${coord[0]},0 `);
+          });
+
+          kmlLines.push('</coordinates></LinearRing></outerBoundaryIs></Polygon>');
+          kmlLines.push('</Placemark>');
+        }
+
+        kmlLines.push('</Document>');
+        kmlLines.push('</kml>');
+
+        const blob = new Blob([kmlLines.join('\n')], { type: 'application/vnd.google-earth.kml+xml' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${businessName.replace(/\s+/g, '_')}_circles.kml`;
+        link.click();
+
+        document.getElementById('output').innerText = 'KML File Generated Successfully!';
+      });
+    }
+  </script>
+</body>
+</html>
