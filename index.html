@@ -8,165 +8,153 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            line-height: 1.6;
+            padding: 0;
         }
-
         .container {
-            max-width: 800px;
-            margin: 0 auto;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
         }
-
-        input, button, select {
-            display: block;
-            width: 100%;
-            margin: 10px 0;
-            padding: 8px;
+        .form-group {
+            margin-bottom: 15px;
         }
-
         label {
             font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
         }
-
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
         button {
-            background-color: #28a745;
-            color: white;
+            padding: 10px 20px;
+            color: #fff;
+            background-color: #007BFF;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
         }
-
         button:hover {
-            background-color: #218838;
-        }
-
-        h1 {
-            text-align: center;
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Geo Circle KML Generator</h1>
-        <label for="businessName">Business Name:</label>
-        <input type="text" id="businessName" placeholder="Enter business name">
-
-        <label for="coordinates">Business Coordinates (Latitude,Longitude):</label>
-        <input type="text" id="coordinates" placeholder="e.g., 26.250787,82.944086">
-
-        <label for="description">Business Description:</label>
-        <input type="text" id="description" placeholder="Enter business description">
-
-        <label for="keyword1">Keyword 1:</label>
-        <input type="text" id="keyword1" placeholder="Keyword 1">
-
-        <label for="keyword2">Keyword 2:</label>
-        <input type="text" id="keyword2" placeholder="Keyword 2">
-
-        <label for="keyword3">Keyword 3:</label>
-        <input type="text" id="keyword3" placeholder="Keyword 3">
-
-        <label for="keyword4">Keyword 4:</label>
-        <input type="text" id="keyword4" placeholder="Keyword 4">
-
-        <label for="keyword5">Keyword 5:</label>
-        <input type="text" id="keyword5" placeholder="Keyword 5">
-
-        <label for="radiusOption">Choose Circle Radius & Number:</label>
-        <select id="radiusOption">
-            <option value="5,1">5 Km → 1 Circle</option>
-            <option value="10,2">10 Km → 2 Circles</option>
-            <option value="15,3">15 Km → 3 Circles</option>
-            <option value="30,5">30 Km → 5 Circles</option>
-        </select>
-
-        <button onclick="generateKML()">Generate KML</button>
+        <form id="kmlForm">
+            <div class="form-group">
+                <label for="businessName">Business Name:</label>
+                <input type="text" id="businessName" required>
+            </div>
+            <div class="form-group">
+                <label for="coordinates">Business Coordinates (Latitude, Longitude):</label>
+                <input type="text" id="coordinates" placeholder="e.g., 26.250787,82.944086" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Business Description:</label>
+                <textarea id="description" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Keywords:</label>
+                <input type="text" class="keyword" placeholder="Keyword 1" required>
+                <input type="text" class="keyword" placeholder="Keyword 2" required>
+                <input type="text" class="keyword" placeholder="Keyword 3" required>
+                <input type="text" class="keyword" placeholder="Keyword 4" required>
+                <input type="text" class="keyword" placeholder="Keyword 5" required>
+            </div>
+            <div class="form-group">
+                <label for="circleOption">Select Circle Option:</label>
+                <select id="circleOption" required>
+                    <option value="5">5 Km → 1 Circle</option>
+                    <option value="10">10 Km → 2 Circles</option>
+                    <option value="15">15 Km → 3 Circles</option>
+                    <option value="30">30 Km → 5 Circles</option>
+                </select>
+            </div>
+            <button type="button" id="generateKml">Generate KML</button>
+        </form>
     </div>
 
     <script>
-        function generateKML() {
-            const businessName = document.getElementById("businessName").value;
-            const coordinates = document.getElementById("coordinates").value.split(",");
-            const description = document.getElementById("description").value;
-            const keywords = [
-                document.getElementById("keyword1").value,
-                document.getElementById("keyword2").value,
-                document.getElementById("keyword3").value,
-                document.getElementById("keyword4").value,
-                document.getElementById("keyword5").value,
-            ];
-            const [latitude, longitude] = coordinates.map(Number);
-            const radiusOption = document.getElementById("radiusOption").value.split(",");
-            const radius = parseInt(radiusOption[0]);
-            const circlesCount = parseInt(radiusOption[1]);
+        document.getElementById('generateKml').addEventListener('click', () => {
+            const businessName = document.getElementById('businessName').value.trim();
+            const coordinates = document.getElementById('coordinates').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const keywords = Array.from(document.querySelectorAll('.keyword')).map(input => input.value.trim());
+            const circleOption = parseInt(document.getElementById('circleOption').value, 10);
 
-            if (!businessName || !latitude || !longitude || !description) {
-                alert("Please fill all required fields.");
+            if (!businessName || !coordinates || !description || keywords.some(k => !k)) {
+                alert('Please fill out all fields.');
                 return;
             }
 
-            const kmlContent = buildKML(businessName, latitude, longitude, description, keywords, radius, circlesCount);
-            downloadKML(kmlContent, `${businessName.replace(" ", "_")}_circles.kml`);
-        }
+            const [latitude, longitude] = coordinates.split(',').map(coord => parseFloat(coord.trim()));
+            if (isNaN(latitude) || isNaN(longitude)) {
+                alert('Invalid coordinates format. Use Latitude, Longitude.');
+                return;
+            }
 
-        function buildKML(businessName, centerLat, centerLon, description, keywords, radius, circlesCount) {
-            const RADIUS_OF_EARTH = 6371; // Earth radius in km
-            const colors = ["ff0000ff", "ff00ff00", "ffff0000", "ffffff00", "ffff00ff"]; // Red, Green, Blue, Yellow, Magenta
-            let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-            kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
-            kml += `<name>${businessName}</name>\n`;
+            const radii = Array.from({ length: circleOption }, (_, i) => (i + 1) * 5); // Radii in kilometers
+            const earthRadius = 6371; // Earth's radius in km
 
-            let currentRadius = radius;
-            let keywordIndex = 0;
-
-            for (let i = 0; i < circlesCount; i++) {
-                kml += `<Folder>\n<name>${businessName} - Circle ${i + 1} - ${currentRadius} KM</name>\n`;
-
-                const circlePoints = generateCirclePoints(centerLat, centerLon, currentRadius, 360);
-                for (let j = 0; j < circlePoints.length; j++) {
-                    const [lat, lon] = circlePoints[j];
-                    const tagKeyword = keywords[keywordIndex % keywords.length];
-                    const color = colors[keywordIndex % colors.length]; // Alternate colors
-                    keywordIndex++;
-
-                    kml += `<Placemark>\n`;
-                    kml += `<name>${tagKeyword}</name>\n`;
-                    kml += `<description>${tagKeyword}: ${description}</description>\n`;
-                    kml += `<Style><IconStyle><color>${color}</color><scale>1.1</scale></IconStyle></Style>\n`;
-                    kml += `<Point>\n<coordinates>${lon},${lat},0</coordinates>\n</Point>\n`;
-                    kml += `</Placemark>\n`;
+            function calculateCirclePoints(lat, lng, radius) {
+                const points = [];
+                for (let angle = 0; angle < 360; angle++) {
+                    const bearing = angle * (Math.PI / 180); // Degrees to radians
+                    const latPoint = Math.asin(
+                        Math.sin(lat) * Math.cos(radius / earthRadius) +
+                        Math.cos(lat) * Math.sin(radius / earthRadius) * Math.cos(bearing)
+                    );
+                    const lngPoint = lng + Math.atan2(
+                        Math.sin(bearing) * Math.sin(radius / earthRadius) * Math.cos(lat),
+                        Math.cos(radius / earthRadius) - Math.sin(lat) * Math.sin(latPoint)
+                    );
+                    points.push({ lat: latPoint * (180 / Math.PI), lng: lngPoint * (180 / Math.PI) });
                 }
-
-                kml += `</Folder>\n`;
-                currentRadius += radius; // Increase radius for next circle
+                return points;
             }
 
-            kml += `</Document>\n</kml>`;
-            return kml;
-        }
+            function generateKML() {
+                let kml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+                kml += `<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
+                kml += `<name>${businessName}</name>\n`;
 
-        function generateCirclePoints(centerLat, centerLon, radius, numPoints) {
-            const points = [];
-            const RADIUS_OF_EARTH = 6371;
+                radii.forEach(radius => {
+                    const points = calculateCirclePoints(latitude * (Math.PI / 180), longitude * (Math.PI / 180), radius);
+                    points.forEach((point, index) => {
+                        const keyword = keywords[index % keywords.length];
+                        kml += `<Placemark>\n`;
+                        kml += `<name>${keyword}: ${description}</name>\n`;
+                        kml += `<Point><coordinates>${point.lng},${point.lat}</coordinates></Point>\n`;
+                        kml += `</Placemark>\n`;
+                    });
+                });
 
-            for (let i = 0; i < numPoints; i++) {
-                const angle = (2 * Math.PI * i) / numPoints; // Distribute points evenly
-                const latOffset = (radius / RADIUS_OF_EARTH) * (180 / Math.PI) * Math.sin(angle);
-                const lonOffset = (radius / RADIUS_OF_EARTH) * (180 / Math.PI) * Math.cos(angle) / Math.cos(centerLat * Math.PI / 180);
-
-                const lat = centerLat + latOffset;
-                const lon = centerLon + lonOffset;
-                points.push([lat, lon]);
+                kml += `</Document>\n</kml>`;
+                return kml;
             }
-            return points;
-        }
 
-        function downloadKML(kmlContent, filename) {
-            const blob = new Blob([kmlContent], { type: "application/vnd.google-earth.kml+xml" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        }
+            function downloadKML(content, filename) {
+                const blob = new Blob([content], { type: 'application/vnd.google-earth.kml+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            const kmlContent = generateKML();
+            downloadKML(kmlContent, `${businessName.replace(/\s+/g, '_')}_circles.kml`);
+        });
     </script>
 </body>
 </html>
